@@ -46,7 +46,7 @@ static unsigned long g_u4TargetPosition;
 
 int s4AF_i2c_write_32(struct i2c_client *client, u16 addr, u32 data)
 {
-	struct i2c_msg msg[1]  = {0,};
+	struct i2c_msg msg[1] = {{0}};
 	char           buf[6]  = {0,};
 	int            ret     = 0;
 
@@ -77,7 +77,7 @@ int s4AF_i2c_write_32(struct i2c_client *client, u16 addr, u32 data)
 
 int s4AF_i2c_write_16(struct i2c_client *client, u16 addr, u16 data)//16
 {
-	struct i2c_msg msg[1]  = {0,};
+	struct i2c_msg msg[1] = {{0}};
 	char           buf[4]  = {0,};
 	int            ret     = 0;
 
@@ -105,7 +105,7 @@ int s4AF_i2c_write_16(struct i2c_client *client, u16 addr, u16 data)//16
 
 int s4AF_i2c_write_8(struct i2c_client *client, u8 addr, u8 data)//6
 {
-	struct i2c_msg msg[1]  = {0,};
+	struct i2c_msg msg[1] = {{0}};
 	char           buf[2]  = {0,};
 	int            ret     = 0;
 

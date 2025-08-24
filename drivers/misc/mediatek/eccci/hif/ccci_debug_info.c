@@ -78,7 +78,7 @@ static inline void calc_irq_info_per_q(
 
 static inline void ccif_debug_print_irq_info(void)
 {
-	struct queue_recv_info q_inofs[CCIF_CH_NUM] = {0};
+	struct queue_recv_info q_inofs[CCIF_CH_NUM] = {{0}};
 	int i;
 
 	calc_irq_info_per_q(&q_inofs[0], 0,	RECV_DATA_SIZE - 1);

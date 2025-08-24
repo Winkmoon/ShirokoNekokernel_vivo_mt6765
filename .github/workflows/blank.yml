@@ -1,0 +1,135 @@
+name: 构建vivomt6765 PD1901BF_EX--ShirokoNeko内核
+
+on:
+  workflow_dispatch:
+    inputs:
+      device:
+        type: choice
+        description: '设备型号-PD1901BF_EX'
+        required: true
+        options:
+        - 'k62v1_ShirokoNeko_defconfig'
+        
+jobs:
+  build:
+
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+
+
+    - name: 安装环境依赖
+      run: |
+        sudo apt-get update
+        sudo -E apt-get -y -qq install git make bc bison ccache openssl dos2unix zip kmod cpio flex libelf-dev curl libssl-dev libtfm-dev wget device-tree-compiler ca-certificates python3 python2 libtinfo5 binutils-aarch64-linux-gnu binutils-arm-linux-gnueabi
+        mkdir -p $GITHUB_WORKSPACE/kernel_workspace
+
+
+
+    - name: 下载安装 Gcc编译器
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        
+        mkdir gcc64
+        wget -O gcc-aarch64.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/961622e926a1b21382dba4dd9fe0e5fb3ee5ab7c.tar.gz
+        tar -C gcc64/ -zxvf gcc-aarch64.tar.gz
+    
+        mkdir gcc32
+        wget -O gcc-arm.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/+archive/cb7b3ac1b7fdb49474ff68761909934d1142f594.tar.gz
+        tar -C gcc32/ -zxvf gcc-arm.tar.gz
+    
+    - name: 下载安装Clang编译器
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        mkdir clang-aosp
+        git clone -q --depth=1 https://github.com/wu17481748/android_prebuilts_clang_host_linux-x86_clang-4691093 clang-aosp
+    
+    
+    - name: 下载ShirokoNeko内核源码
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        git clone https://github.com/Winkmoon/ShirokoNekokernel_vivo_mt6765 android-kernel
+        cd android-kernel
+
+
+
+    - name: 集成SukiSU
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        rm -rf KernelSU
+        curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s nongki
+        cd ./KernelSU
+        KSU_VERSION=$(expr $(/usr/bin/git rev-list --count main) "+" 10700)
+        export KSU_VERSION=$KSU_VERSION
+        sed -i "s/DKSU_VERSION=12800/DKSU_VERSION=$KSU_VERSION/" kernel/Makefile
+        cd ..
+
+        echo "CONFIG_MODULE_SIG=n" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_MODULE_SIG_ALL=n" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+
+        
+        echo "CONFIG_KSU=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_KSU_TRACEPOINT_HOOK=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+
+
+        echo "CONFIG_KPM=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_KPROBES=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_HAVE_KPROBES=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+
+
+        echo "CONFIG_KALLSYMS=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+        echo "CONFIG_KALLSYMS_ALL=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+
+
+        echo "CONFIG_OVERLAY_FS=y" >> ./arch/arm64/configs/k62v1_ShirokoNeko_defconfig
+
+               
+    - name: 设置ccache缓存
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: build-kernel-mido-kernel
+        max-size: 2G
+
+    - name: 切换python2.7
+      run: |
+       sudo rm /bin/python
+       sudo ln -s /bin/python2.7 /bin/python
+ 
+    - name: 开始编译内核
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace/android-kernel
+        export PATH=$GITHUB_WORKSPACE/kernel_workspace/clang-aosp/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc64/bin:$GITHUB_WORKSPACE/kernel_workspace/gcc32/bin:$PATH
+        export KBUILD_BUILD_USER=Ran love Bai
+        export KBUILD_BUILD_HOST=Ran_yong_yuan_ai_bai
+        export KBUILD_BUILD_TIMESTAMP="Mon Sep 22 22:53:44 UTC 2025"
+        export KBUILD_BUILD_HOST=ShirokoNeko_Xinran_StarBai
+        export KBUILD_BUILD_USER=酷安@Xinran_StarBai
+        cp -a arch/arm64/configs/${{ github.event.inputs.device }}_PD1901BF_EX arch/arm64/configs/${{ github.event.inputs.device }}
+        make -s -j$(nproc --all) O=out ARCH=arm64 ${{ github.event.inputs.device }}
+        make -j$(nproc --all) CC="ccache clang" O=out ARCH=arm64 CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=aarch64-linux-android- CROSS_COMPILE_ARM32=arm-linux-androideabi-
+                
+
+    - name: 制作Anykernel3卡刷包
+      run: |
+        cd $GITHUB_WORKSPACE/kernel_workspace
+        cp android-kernel/out/arch/arm64/boot/Image.gz-dtb android-kernel/Anykernel3/
+        cp -a android-kernel/Anykernel3 android-kernel/out/arch/arm64/boot/anykernel3
+        zip -r android-kernel/out/arch/arm64/boot/ShirokoNeko-${{ github.event.inputs.device }}-卡刷包.zip android-kernel/out/arch/arm64/boot/anykernel3
+        
+
+    
+    - name: 上传卡刷包
+      uses: actions/upload-artifact@v4
+      with:
+        name: mtk6765-${{ github.event.inputs.device }}-Anykernel3
+        path: kernel_workspace/android-kernel/out/arch/arm64/boot/anykernel3/*
+        
+
+    - name: 上传编译内核
+      uses: actions/upload-artifact@v4
+      with:
+        name: mtk6765-${{ github.event.inputs.device }}-kernel
+        path: kernel_workspace/android-kernel/out/arch/arm64/boot/*

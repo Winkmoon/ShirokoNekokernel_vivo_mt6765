@@ -20,7 +20,7 @@
 #include <linux/regulator/driver.h>
 
 #include <mt-plat/mtk_boot.h>
-#include <mtk_musb.h>
+// #include <mtk_musb.h>
 
 #include <charger_class.h>
 #include <mtk_charger.h>
@@ -740,10 +740,10 @@ static int mt6370_set_usbsw_state(struct mt6370_pmu_charger_data *chg_data,
 {
 	dev_info(chg_data->dev, "%s: state = %d\n", __func__, state);
 
-	if (state == MT6370_USBSW_CHG)
-		Charger_Detect_Init();
-	else
-		Charger_Detect_Release();
+	// if (state == MT6370_USBSW_CHG)
+	//	Charger_Detect_Init();
+	// else
+	//	Charger_Detect_Release();
 
 	return 0;
 }
